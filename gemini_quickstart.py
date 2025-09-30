@@ -12,7 +12,7 @@ client = genai.Client()
 
 response = client.models.generate_content(
     model = "gemini-2.5-flash",
-    contents = "How to ride scooter" 
+    contents = "Write a code that print all the multiples of 5" 
 )
 
-print(response.text)
+print(response.python)

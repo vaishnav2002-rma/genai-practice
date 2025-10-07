@@ -22,7 +22,7 @@ def generate_summary(data: TextInput):
 
         response = client.models.generate_content(
             model="gemini-2.0-flash",
-            contents=prompt
+            contents=prompt            
         )
 
         summary = response.text.strip()
@@ -59,3 +59,34 @@ def generate_entities(data: TextInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/v1/few_shot")
+def few_shot_prompting():
+    prompt="""
+    Sort the club based on the most chapions league trophies
+    Question: Ajax, PSG, Manchester United
+    Answer: Ajax(4), Manchester United(3), PSG(1)
+    Question: Real Madrid, Liverpool, AC Milan
+    Answer: 
+    """
+
+    response = client.models.generate_content(
+        model = "gemini-2.5-flash",
+        contents = prompt
+    )
+
+    return response.text
+
+@app.post("/v1/zero_shot")
+def few_shot_prompting():
+    prompt="""
+    Sort the club based on the most league trophies. Return the number of league titles in brackets beside the team name. Don't give space and just space the teams with comma.
+    Question: Real Madrid, PSG, Manchester United
+    Answer: 
+    """
+
+    response = client.models.generate_content(
+        model = "gemini-2.5-flash",
+        contents = prompt
+    )
+
+    return response.text

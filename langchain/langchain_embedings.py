@@ -1,12 +1,15 @@
 from langchain_google_genai import GoogleGenerativeAIEmbeddings  
 from dotenv import load_dotenv 
 import os
+import faiss 
+from langchain_community.docstore.in_memory import InMemoryDocstore
+from langchain_community.vectorstores import FAISS
 
 load_dotenv()
 
 os.environ["GOOGLE_API_KEY"] = os.getenv("GEMINI_API_KEY")
 
-#GENERATE EMBEDDINGS
+# GENERATE EMBEDDINGS
 
 embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 vector_1 = embeddings.embed_query("Hello, world!")
@@ -22,3 +25,14 @@ vector_2 = embeddings.embed_documents(
 
 print(vector_2)
 
+# STORING EMBEDDINGS IN VECTOR STORE
+
+embedding_dim = len(vector_1)
+index = faiss.IndexFlatL2(embedding_dim)
+
+vector_store = FAISS(
+    embedding_function=embeddings,
+    index=index,
+    docstore=InMemoryDocstore(),
+    index_to_docstore_id={},
+)

@@ -1,8 +1,9 @@
 import os
-import math 
+import time  
 from pathlib import Path
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from langchain_community.document_loaders import PyPDFLoader
@@ -73,8 +74,8 @@ def build_or_load_vectorstore(pdf_path: str) -> FAISS:
 def search_similar(question: str, index, docs, k: int = 4):
     """Find top-k similar document chunks."""
     q_emb = np.array(get_gemini_embedding(question), dtype="float32").reshape(1, -1)
-    distances, indices = index.search(q_emb, k)
-    return [docs[i] for i in indices[0]]
+    D, I = index.search(q_emb, k)
+    return [docs[i] for i in I[0] if i < len(docs)]
 
 
 def answer_question(question: str, index, docs, top_k: int = 4):
@@ -100,6 +101,27 @@ def answer_question(question: str, index, docs, top_k: int = 4):
 app = FastAPI(title="Gemini PDF RAG API", version="1.0")
 
 index, docs = None, None 
+
+RATE_LIMIT = 500
+TIME_WINDOOW = 60
+request_timestamps = []
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    global request_timestamps
+    now = time.time()
+
+    request_timestamps = [t for t in request_timestamps if now - t < TIME_WINDOOW]
+
+    if len(request_timestamps) >= RATE_LIMIT:
+        return JSONResponse(
+            status_code=429, 
+            content = {"detail": "Rate limit exceeded. Please try again later."},
+        )
+    
+    request_timestamps.append(now)
+    response = await call_next(request)
+    return response 
 
 class QuestionRequest(BaseModel):
     question: str 

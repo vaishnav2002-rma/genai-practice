@@ -10,10 +10,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.vectorstores.faiss import dependable_faiss_import
-# Removed deprecated/unused LangChain memory imports
+from langchain.memory import PostgresChatMessageHistory
+from langchain.schema import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import ChatMessage
 
 from google import genai 
 from google.genai import types
@@ -60,7 +62,7 @@ class ChatMessage(Base):
     message_type = Column(String, nullable=False)  # 'human' or 'ai'
     content = Column(Text, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
-    extra_metadata = Column(Text, nullable=True)  # JSON string for additional data
+    metadata = Column(Text, nullable=True)  # JSON string for additional data
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -153,7 +155,7 @@ def save_chat_message(session_id: str, message_type: str, content: str, metadata
             session_id=session_id,
             message_type=message_type,
             content=content,
-            extra_metadata=metadata
+            metadata=metadata
         )
         db.add(message)
         db.commit()
@@ -174,7 +176,7 @@ def get_chat_history(session_id: str, limit: int = 50) -> List[dict]:
                 "type": msg.message_type,
                 "content": msg.content,
                 "timestamp": msg.timestamp,
-                "metadata": msg.extra_metadata
+                "metadata": msg.metadata
             }
             for msg in reversed(messages)  # Reverse to get chronological order
         ]
